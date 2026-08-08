@@ -71,11 +71,13 @@ function startDeployment(force = false, key = '') {
       return;
     }
 
-    broadcastData(`\nExecuting: git pull origin main && docker compose up -d --build\n\n`);
+    broadcastData(`\nExecuting: git pull origin main && BUILDKIT_PROGRESS=plain docker compose up -d --build\n\n`);
 
-    const command = `cd ${PROJECT_DIR} && git pull origin main && docker compose --env-file .env.production --env-file .env -f docker/compose.yml up -d --build`;
+    const command = `cd ${PROJECT_DIR} && git pull origin main && export BUILDKIT_PROGRESS=plain && export FORCE_COLOR=0 && docker compose --env-file .env.production --env-file .env -f docker/compose.yml up -d --build`;
 
-    const child = spawn('bash', ['-c', command]);
+    const child = spawn('bash', ['-c', command], {
+      env: { ...process.env, BUILDKIT_PROGRESS: 'plain', FORCE_COLOR: '0' }
+    });
 
     child.stdout.on('data', (data) => broadcastData(data.toString()));
     child.stderr.on('data', (data) => broadcastData(data.toString()));
