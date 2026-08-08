@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Deployment Control - Monitor</title>
+  <style>
+    :root {
+      --bg-color: #0b0f19;
+      --card-bg: #111827;
+      --border-color: #1f2937;
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --text: #f3f4f6;
+      --text-muted: #9ca3af;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 1rem;
+    }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 2.5rem;
+      width: 100%;
+      max-width: 480px;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+    }
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-top: 0;
+      margin-bottom: 0.5rem;
+      color: #38bdf8;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      margin-bottom: 1.5rem;
+      line-height: 1.5;
+    }
+    .form-group {
+      margin-bottom: 1.25rem;
+    }
+    label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    input[type="password"], input[type="text"] {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      background: #090d16;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 1rem;
+      box-sizing: border-box;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input:focus {
+      border-color: var(--primary);
+    }
+    button {
+      width: 100%;
+      padding: 0.85rem 1rem;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.2s, transform 0.1s;
+    }
+    button:hover {
+      background: var(--primary-hover);
+    }
+    button:active {
+      transform: scale(0.99);
+    }
+    .quick-link {
+      margin-top: 1.5rem;
+      font-size: 0.85rem;
+      text-align: center;
+      color: var(--text-muted);
+    }
+    .quick-link code {
+      background: #090d16;
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: #38bdf8;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>🚀 AutoJobAgent Deployer</h1>
+    <p>Enter your secret key below to pull latest code and trigger container build & deployment.</p>
+
+    <form action="/trigger" method="GET">
+      <div class="form-group">
+        <label for="key">Secret Deployment Key</label>
+        <input type="password" id="key" name="key" placeholder="Enter deployment key..." required autofocus />
+      </div>
+
+      <button type="submit">Trigger Build & Deploy</button>
+    </form>
+
+    <div class="quick-link">
+      Direct URL Access: <code>/trigger?key=YOUR_SECRET_KEY</code>
+    </div>
+  </div>
+</body>
+</html>

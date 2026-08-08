@@ -1,0 +1,17 @@
+[Unit]
+Description=AutoJobAgent Deployment Monitor Service
+After=network.target
+
+[Service]
+Type=simple
+User=dg
+WorkingDirectory=/home/dg/core_dir/deployment/websites/monitor
+ExecStart=/home/dg/.nvm/versions/node/v24.14.0/bin/node /home/dg/core_dir/deployment/websites/monitor/server.mjs
+Restart=always
+RestartSec=3
+StandardOutput=append:/tmp/deploy_listener.log
+StandardError=append:/tmp/deploy_listener.log
+Environment=DEPLOY_KEY=d8f9a2e4b7c10395e86d4b21a7f0e39c5812b467a9d0e132f485c7a9b01e23f4
+
+[Install]
+WantedBy=multi-user.target
