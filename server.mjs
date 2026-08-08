@@ -18,10 +18,11 @@ let activeListeners = new Set();
 
 function broadcastData(chunk) {
   buildLogs += chunk;
+  const sanitized = chunk.replace(/</g, '&lt;').replace(/>/g, '&gt;');
   for (const res of activeListeners) {
     try {
-      const sanitized = chunk.replace(/</g, '&lt;').replace(/>/g, '&gt;');
       res.write(sanitized);
+      if (typeof res.flush === 'function') res.flush();
     } catch (e) {
       activeListeners.delete(res);
     }
