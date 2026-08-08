@@ -27,13 +27,23 @@ export const BUILD_HEADER_HTML = `<!DOCTYPE html>
     body { font-family: 'Courier New', monospace; background: #090d16; color: #e2e8f0; padding: 2rem; margin: 0; }
     .container { max-width: 900px; margin: 0 auto; background: #111827; border: 1px solid #1f2937; border-radius: 8px; padding: 1.5rem; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
     h1 { color: #38bdf8; font-size: 1.5rem; border-bottom: 1px solid #1f2937; padding-bottom: 0.75rem; margin-top: 0; }
-    pre { background: #030712; padding: 1rem; border-radius: 6px; color: #4ade80; overflow-x: auto; white-space: pre-wrap; word-wrap: break-word; font-size: 0.9rem; line-height: 1.5; border: 1px solid #111827; }
+    pre { background: #030712; padding: 1rem; border-radius: 6px; color: #4ade80; overflow-x: auto; white-space: pre-wrap; word-wrap: break-word; font-size: 0.9rem; line-height: 1.5; border: 1px solid #111827; max-height: 70vh; }
     .status-badge { display: inline-block; padding: 4px 12px; border-radius: 9999px; font-weight: bold; font-size: 0.85rem; margin-bottom: 1rem; }
     .bg-success { background: #166534; color: #4ade80; }
     .bg-warning { background: #854d0e; color: #fef08a; }
     .bg-error { background: #991b1b; color: #fca5a5; }
     .bg-info { background: #1e40af; color: #93c5fd; }
   </style>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const observer = new MutationObserver(() => {
+        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+        const el = document.getElementById('log-output');
+        if (el) el.scrollTop = el.scrollHeight;
+      });
+      observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+    });
+  </script>
 </head>
 <body>
   <div class="container">

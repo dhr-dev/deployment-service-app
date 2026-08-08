@@ -115,18 +115,24 @@ const server = http.createServer((req, res) => {
 
     // If build is in progress or explicit build action requested
     if (isDeploying || action === 'build' || req.method === 'POST') {
-      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.writeHead(200, {
+        'Content-Type': 'text/html; charset=utf-8',
+        'Transfer-Encoding': 'chunked',
+        'X-Content-Type-Options': 'nosniff',
+        'Cache-Control': 'no-cache, no-transform'
+      });
       res.write(BUILD_HEADER_HTML);
+      if (typeof res.flushHeaders === 'function') res.flushHeaders();
 
       activeListeners.add(res);
       req.on('close', () => activeListeners.delete(res));
 
       if (isDeploying) {
-        res.write(`<div class="status-badge bg-info">⏳ Joining Active Build Session...</div><pre>`);
+        res.write(`<div class="status-badge bg-info">⏳ Joining Active Build Session...</div><pre id="log-output">`);
         const sanitizedCurrentLogs = buildLogs.replace(/</g, '&lt;').replace(/>/g, '&gt;');
         res.write(sanitizedCurrentLogs);
       } else {
-        res.write(`<div class="status-badge bg-info">Checking Repository Updates...</div><pre>`);
+        res.write(`<div class="status-badge bg-info">Checking Repository Updates...</div><pre id="log-output">`);
         startDeployment(force, key);
       }
       return;
