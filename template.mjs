@@ -31,7 +31,7 @@ export const BUILD_HEADER_HTML = `<!DOCTYPE html>
     .container { max-width: 1100px; margin: 0 auto; background: #111827; border: 1px solid #1f2937; border-radius: 10px; padding: 0.75rem 0.6rem; box-shadow: 0 10px 25px rgba(0,0,0,0.5); width: 100%; }
     .header { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #1f2937; padding-bottom: 0.6rem; margin-bottom: 0.6rem; flex-wrap: wrap; gap: 8px; }
     h1 { color: #38bdf8; font-size: 1.05rem; margin: 0; font-family: system-ui, -apple-system, sans-serif; font-weight: 700; }
-    pre { background: #030712; padding: 0.75rem 0.5rem; border-radius: 8px; color: #4ade80; overflow-x: auto; white-space: pre-wrap; word-wrap: break-word; font-size: 0.8rem; line-height: 1.45; border: 1px solid #1f2937; max-height: 82vh; margin: 0; }
+    pre { background: #030712; padding: 0.5rem 0.25rem; border-radius: 8px; color: #e2e8f0; overflow-x: auto; font-size: 0.8rem; line-height: 1.5; border: 1px solid #1f2937; max-height: 82vh; margin: 0; }
     .status-badge { display: inline-block; padding: 3px 10px; border-radius: 9999px; font-weight: bold; font-size: 0.78rem; margin-bottom: 0.6rem; font-family: system-ui, -apple-system, sans-serif; }
     .bg-success { background: #166534; color: #4ade80; }
     .bg-warning { background: #854d0e; color: #fef08a; }
@@ -39,19 +39,20 @@ export const BUILD_HEADER_HTML = `<!DOCTYPE html>
     .bg-info { background: #1e40af; color: #93c5fd; }
     .pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
     @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+
     /* Zebra Striping (Alternating Excel-style odd/even log rows) */
-    .log-row { display: block; padding: 2px 6px; border-radius: 4px; margin: 1px 0; word-break: break-all; white-space: pre-wrap; font-family: inherit; }
-    .log-row.line-even { background: rgba(15, 23, 42, 0.75); color: #38bdf8; border-left: 2px solid #0284c7; } /* Deep Navy/Cyan */
-    .log-row.line-odd  { background: rgba(3, 7, 18, 0.95);   color: #4ade80; border-left: 2px solid #16a34a; } /* Dark Emerald/Green */
+    .log-row { display: block; padding: 4px 8px; border-radius: 4px; margin: 3px 0; word-break: break-all; white-space: pre-wrap; font-family: inherit; }
+    .log-row.line-even { background: #1e293b !important; color: #38bdf8 !important; border-left: 3px solid #0284c7 !important; } /* Row 1: Slate Blue / Cyan */
+    .log-row.line-odd  { background: #0b0f19 !important; color: #4ade80 !important; border-left: 3px solid #16a34a !important; } /* Row 2: Deep Charcoal / Green */
 
     @media (min-width: 640px) {
       body { padding: 1.5rem 1rem; }
       .container { padding: 1.5rem; border-radius: 12px; }
       .header { padding-bottom: 0.75rem; margin-bottom: 1rem; }
       h1 { font-size: 1.3rem; }
-      pre { padding: 1rem; font-size: 0.88rem; line-height: 1.5; }
+      pre { padding: 0.75rem; font-size: 0.88rem; line-height: 1.5; }
       .status-badge { font-size: 0.85rem; margin-bottom: 1rem; padding: 4px 12px; }
-      .log-row { padding: 3px 8px; margin: 2px 0; }
+      .log-row { padding: 5px 10px; margin: 3px 0; }
     }
   </style>
   <script>
@@ -59,7 +60,7 @@ export const BUILD_HEADER_HTML = `<!DOCTYPE html>
       const el = document.getElementById('log-output');
       if (!el) return;
 
-      let lastContent = '';
+      let rawBuffer = '';
 
       function escapeHtml(str) {
         return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -67,8 +68,8 @@ export const BUILD_HEADER_HTML = `<!DOCTYPE html>
 
       function updateZebraRows() {
         const text = el.innerText || el.textContent || '';
-        if (text === lastContent) return;
-        lastContent = text;
+        if (!text || text === rawBuffer) return;
+        rawBuffer = text;
 
         const lines = text.split('\n');
         let html = '';
@@ -78,16 +79,21 @@ export const BUILD_HEADER_HTML = `<!DOCTYPE html>
           const cls = (i % 2 === 0) ? 'line-even' : 'line-odd';
           html += '<span class="log-row ' + cls + '">' + escapeHtml(line) + '</span>';
         }
+
+        observer.disconnect();
         el.innerHTML = html;
         el.scrollTop = el.scrollHeight;
         window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+        observer.observe(el, { childList: true, characterData: true, subtree: true });
       }
 
       const observer = new MutationObserver(() => {
         updateZebraRows();
       });
       observer.observe(el, { childList: true, characterData: true, subtree: true });
-      setTimeout(updateZebraRows, 100);
+      setTimeout(updateZebraRows, 50);
+      setTimeout(updateZebraRows, 300);
+      setTimeout(updateZebraRows, 800);
     });
   </script>
 </head>
