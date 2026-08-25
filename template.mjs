@@ -45,7 +45,11 @@ export const BUILD_HEADER_HTML = `<!DOCTYPE html>
     .log-row.line-even { background: #1e293b !important; color: #38bdf8 !important; border-left: 3px solid #0284c7 !important; } /* Row 1: Slate Blue / Cyan */
     .log-row.line-odd  { background: #0b0f19 !important; color: #4ade80 !important; border-left: 3px solid #16a34a !important; } /* Row 2: Deep Charcoal / Green */
 
-    /* Copy Tooltip & Interactive Log Line Styling */
+    /* Copy Button & Interactive Log Line Styling */
+    .btn-copy-all { background: #1e293b; color: #38bdf8; border: 1px solid #0284c7; padding: 5px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: 700; cursor: pointer; transition: background 0.15s ease, transform 0.1s ease; font-family: system-ui, -apple-system, sans-serif; }
+    .btn-copy-all:hover { background: #0284c7; color: #ffffff; }
+    .btn-copy-all:active { transform: scale(0.96); }
+
     .log-row { position: relative; cursor: pointer; user-select: text; transition: filter 0.15s ease; }
     .log-row:hover { filter: brightness(1.25); }
     .log-row::after { content: '📋 Copy'; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: #0f172a; color: #94a3b8; font-size: 0.72rem; font-weight: 600; padding: 2px 8px; border-radius: 4px; border: 1px solid #334155; opacity: 0; pointer-events: none; transition: opacity 0.15s ease; font-family: system-ui, -apple-system, sans-serif; }
@@ -55,7 +59,7 @@ export const BUILD_HEADER_HTML = `<!DOCTYPE html>
       .header { padding-bottom: 0.75rem; margin-bottom: 1rem; }
       h1 { font-size: 1.3rem; }
       pre { padding: 0.75rem; font-size: 0.88rem; line-height: 1.5; }
-      .status-badge { font-size: 0.85rem; margin-bottom: 1rem; padding: 4px 12px; }
+      .status-badge { font-size: 0.85rem; margin-bottom: 0; padding: 4px 12px; }
       .log-row { padding: 5px 10px; margin: 3px 0; }
       .log-row:hover::after { opacity: 1; }
     }
@@ -68,6 +72,7 @@ export const BUILD_HEADER_HTML = `<!DOCTYPE html>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       const el = document.getElementById('log-output');
+      const copyAllBtn = document.getElementById('copy-all-btn');
 
       function showToast(msg) {
         let toast = document.getElementById('copy-toast');
@@ -81,37 +86,47 @@ export const BUILD_HEADER_HTML = `<!DOCTYPE html>
         setTimeout(() => toast.classList.remove('show'), 1800);
       }
 
-      function copyLogLine(text, rowEl) {
+      function copyLogLine(text, rowEl, toastMsg) {
         if (!text) return;
         const cleanText = text.replace(/📋 Copy|✅ Copied!/g, '').trim();
         if (!cleanText) return;
+
+        let success = false;
+        try {
+          const ta = document.createElement('textarea');
+          ta.value = cleanText;
+          ta.style.position = 'fixed';
+          ta.style.top = '0';
+          ta.style.left = '-9999px';
+          ta.style.opacity = '0';
+          ta.setAttribute('readonly', '');
+          document.body.appendChild(ta);
+          ta.focus();
+          ta.select();
+          ta.setSelectionRange(0, 99999);
+          success = document.execCommand('copy');
+          document.body.removeChild(ta);
+        } catch (e) {
+          success = false;
+        }
+
+        if (!success && navigator.clipboard) {
+          navigator.clipboard.writeText(cleanText).catch(() => {});
+        }
 
         if (rowEl) {
           rowEl.classList.add('copied');
           setTimeout(() => rowEl.classList.remove('copied'), 1500);
         }
 
-        if (navigator.clipboard && window.isSecureContext) {
-          navigator.clipboard.writeText(cleanText).then(() => {
-            showToast('📋 Copied log line!');
-          }).catch(() => fallbackCopy(cleanText));
-        } else {
-          fallbackCopy(cleanText);
-        }
+        showToast(toastMsg || '📋 Copied log line!');
       }
 
-      function fallbackCopy(text) {
-        const ta = document.createElement('textarea');
-        ta.value = text;
-        ta.style.position = 'fixed';
-        ta.style.opacity = '0';
-        document.body.appendChild(ta);
-        ta.select();
-        try {
-          document.execCommand('copy');
-          showToast('📋 Copied log line!');
-        } catch (e) {}
-        document.body.removeChild(ta);
+      if (copyAllBtn) {
+        copyAllBtn.addEventListener('click', () => {
+          const rawText = el ? (el.innerText || el.textContent || '') : '';
+          copyLogLine(rawText, null, '📋 Copied full log!');
+        });
       }
 
       if (el) {
@@ -160,8 +175,11 @@ export const BUILD_HEADER_HTML = `<!DOCTYPE html>
 <body>
   <div class="container">
     <div class="header">
-      <h1>🚀 AutoJobAgent Live Deployment Stream</h1>
-      <span class="status-badge bg-info pulse">● LIVE STREAM</span>
+      <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+        <h1>🚀 AutoJobAgent Live Deployment Stream</h1>
+        <span class="status-badge bg-info pulse">● LIVE STREAM</span>
+      </div>
+      <button id="copy-all-btn" class="btn-copy-all">📋 Copy All Logs</button>
     </div>`;
 
 export const TRIGGER_DISABLED_HTML = `<!DOCTYPE html>
