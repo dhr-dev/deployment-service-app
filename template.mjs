@@ -123,24 +123,26 @@ export const BUILD_HEADER_HTML = `<!DOCTYPE html>
           }
         });
 
-        // Mobile Long-Press (Press and Hold ~450ms)
-        let pressTimer = null;
+        // Mobile Double-Tap to Copy
+        let lastTapTime = 0;
+        let lastTapRow = null;
 
-        el.addEventListener('touchstart', (e) => {
+        el.addEventListener('touchend', (e) => {
           const row = e.target.closest('.log-row');
           if (!row) return;
-          pressTimer = setTimeout(() => {
+
+          const currentTime = Date.now();
+          const tapLength = currentTime - lastTapTime;
+
+          if (tapLength < 320 && tapLength > 0 && lastTapRow === row) {
             copyLogLine(row.innerText || row.textContent, row);
             if (navigator.vibrate) navigator.vibrate(50);
-          }, 450);
-        }, { passive: true });
-
-        el.addEventListener('touchend', () => {
-          if (pressTimer) clearTimeout(pressTimer);
-        });
-
-        el.addEventListener('touchmove', () => {
-          if (pressTimer) clearTimeout(pressTimer);
+            lastTapTime = 0;
+            lastTapRow = null;
+          } else {
+            lastTapTime = currentTime;
+            lastTapRow = row;
+          }
         });
       }
 
