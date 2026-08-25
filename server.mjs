@@ -134,7 +134,7 @@ function startDeployment(force = false, key = '') {
 
     broadcastData(`\nExecuting: git pull origin main && BUILDKIT_PROGRESS=plain docker compose up -d --build\n\n`);
 
-    const command = `cd ${PROJECT_DIR} && git pull origin main && export BUILDKIT_PROGRESS=plain && export FORCE_COLOR=0 && docker compose --env-file .env.production --env-file .env -f docker/compose.yml up -d --build`;
+    const command = `cd ${PROJECT_DIR} && git pull origin main && export BUILDKIT_PROGRESS=plain && export FORCE_COLOR=0 && docker compose --env-file .env.portainer -f docker/compose.yml up -d --build`;
 
     const child = spawn('bash', ['-c', command], {
       env: { ...process.env, BUILDKIT_PROGRESS: 'plain', FORCE_COLOR: '0' }
@@ -205,35 +205,34 @@ const server = http.createServer((req, res) => {
       return;
     }
 
-    if (isDeploying) {
-      res.writeHead(200, {
-        'Content-Type': 'text/html; charset=utf-8',
-        'Transfer-Encoding': 'chunked',
-        'X-Content-Type-Options': 'nosniff',
-        'Cache-Control': 'no-cache, no-transform'
-      });
-      res.write(BUILD_HEADER_HTML);
-      if (typeof res.flushHeaders === 'function') res.flushHeaders();
+    res.writeHead(200, {
+      'Content-Type': 'text/html; charset=utf-8',
+      'Transfer-Encoding': 'chunked',
+      'X-Content-Type-Options': 'nosniff',
+      'Cache-Control': 'no-cache, no-transform'
+    });
+    res.write(BUILD_HEADER_HTML);
+    if (typeof res.flushHeaders === 'function') res.flushHeaders();
 
-      activeListeners.add(res);
-      req.on('close', () => activeListeners.delete(res));
+    res.write(`<div class="status-badge bg-info">⏳ Connected to Live Portainer Container Stream...</div><pre id="log-output">`);
 
-      res.write(`<div class="status-badge bg-info">⏳ Connected to Live Build Session...</div><pre id="log-output">`);
-      const sanitizedCurrentLogs = buildLogs.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-      res.write(sanitizedCurrentLogs);
-      return;
-    }
+    const logProcess = spawn('docker', ['compose', '--env-file', `${PROJECT_DIR}/.env.portainer`, '-f', `${PROJECT_DIR}/docker/compose.yml`, 'logs', '-f', '--tail', '100'], { cwd: PROJECT_DIR });
 
-    // If not currently deploying, render clean idle status dashboard
-    getContainerStatuses((containers) => {
-      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-      res.end(renderWatchIdleHtml({
-        key,
-        commit: commit || lastCommit,
-        lastStatus,
-        lastTimestamp: lastDeployTimestamp,
-        containers
-      }));
+    const streamData = (data) => {
+      try {
+        const sanitized = data.toString().replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        res.write(sanitized);
+        if (typeof res.flush === 'function') res.flush();
+      } catch (e) {}
+    };
+
+    logProcess.stdout.on('data', streamData);
+    logProcess.stderr.on('data', streamData);
+
+    req.on('close', () => {
+      try {
+        logProcess.kill('SIGTERM');
+      } catch (e) {}
     });
     return;
   }
