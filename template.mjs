@@ -26,18 +26,27 @@ export const BUILD_HEADER_HTML = `<!DOCTYPE html>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body { font-family: 'Courier New', monospace; background: #090d16; color: #e2e8f0; padding: 1.5rem; margin: 0; }
-    .container { max-width: 960px; margin: 0 auto; background: #111827; border: 1px solid #1f2937; border-radius: 12px; padding: 1.5rem; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
-    .header { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #1f2937; padding-bottom: 0.75rem; margin-bottom: 1rem; flex-wrap: wrap; gap: 8px; }
-    h1 { color: #38bdf8; font-size: 1.25rem; margin: 0; font-family: system-ui, sans-serif; font-weight: 700; }
-    pre { background: #030712; padding: 1.2rem; border-radius: 8px; color: #4ade80; overflow-x: auto; white-space: pre-wrap; word-wrap: break-word; font-size: 0.88rem; line-height: 1.5; border: 1px solid #1f2937; max-height: 72vh; }
-    .status-badge { display: inline-block; padding: 4px 12px; border-radius: 9999px; font-weight: bold; font-size: 0.85rem; margin-bottom: 1rem; font-family: system-ui, sans-serif; }
+    * { box-sizing: border-box; }
+    body { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace; background: #090d16; color: #e2e8f0; padding: 0.5rem 0.25rem; margin: 0; min-height: 100vh; }
+    .container { max-width: 1100px; margin: 0 auto; background: #111827; border: 1px solid #1f2937; border-radius: 10px; padding: 0.75rem 0.6rem; box-shadow: 0 10px 25px rgba(0,0,0,0.5); width: 100%; }
+    .header { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #1f2937; padding-bottom: 0.6rem; margin-bottom: 0.6rem; flex-wrap: wrap; gap: 8px; }
+    h1 { color: #38bdf8; font-size: 1.05rem; margin: 0; font-family: system-ui, -apple-system, sans-serif; font-weight: 700; }
+    pre { background: #030712; padding: 0.75rem 0.5rem; border-radius: 8px; color: #4ade80; overflow-x: auto; white-space: pre-wrap; word-wrap: break-word; font-size: 0.8rem; line-height: 1.45; border: 1px solid #1f2937; max-height: 82vh; margin: 0; }
+    .status-badge { display: inline-block; padding: 3px 10px; border-radius: 9999px; font-weight: bold; font-size: 0.78rem; margin-bottom: 0.6rem; font-family: system-ui, -apple-system, sans-serif; }
     .bg-success { background: #166534; color: #4ade80; }
     .bg-warning { background: #854d0e; color: #fef08a; }
     .bg-error { background: #991b1b; color: #fca5a5; }
     .bg-info { background: #1e40af; color: #93c5fd; }
     .pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
     @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+    @media (min-width: 640px) {
+      body { padding: 1.5rem 1rem; }
+      .container { padding: 1.5rem; border-radius: 12px; }
+      .header { padding-bottom: 0.75rem; margin-bottom: 1rem; }
+      h1 { font-size: 1.3rem; }
+      pre { padding: 1.2rem; font-size: 0.88rem; line-height: 1.5; }
+      .status-badge { font-size: 0.85rem; margin-bottom: 1rem; padding: 4px 12px; }
+    }
   </style>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
