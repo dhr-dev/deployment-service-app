@@ -19,7 +19,8 @@ export const UNAUTHORIZED_HTML = `<!DOCTYPE html>
 </body>
 </html>`;
 
-export const BUILD_HEADER_HTML = `<!DOCTYPE html>
+export function renderWatchPageHtml({ key = '', commit = '' }) {
+  return `<!DOCTYPE html>
 <html>
 <head>
   <title>AutoJobAgent Deployment Stream</title>
@@ -41,16 +42,36 @@ export const BUILD_HEADER_HTML = `<!DOCTYPE html>
     @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
 
     /* Zebra Striping (Alternating Excel-style odd/even log rows) */
-    .log-row { display: block; padding: 4px 8px; border-radius: 4px; margin: 3px 0; word-break: break-all; white-space: pre-wrap; font-family: inherit; }
+    .log-row {
+      display: block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      margin: 3px 0;
+      word-break: break-all;
+      white-space: pre-wrap;
+      font-family: inherit;
+      position: relative;
+      cursor: pointer;
+      user-select: text;
+      -webkit-user-select: text;
+      -webkit-touch-callout: none;
+      touch-action: pan-y;
+      transition: filter 0.15s ease;
+    }
     .log-row.line-even { background: #1e293b !important; color: #38bdf8 !important; border-left: 3px solid #0284c7 !important; } /* Row 1: Slate Blue / Cyan */
     .log-row.line-odd  { background: #0b0f19 !important; color: #4ade80 !important; border-left: 3px solid #16a34a !important; } /* Row 2: Deep Charcoal / Green */
+
+    @media (hover: none), (pointer: coarse) {
+      .log-row {
+        cursor: default;
+      }
+    }
 
     /* Copy Button & Interactive Log Line Styling */
     .btn-copy-all { background: #1e293b; color: #38bdf8; border: 1px solid #0284c7; padding: 5px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: 700; cursor: pointer; transition: background 0.15s ease, transform 0.1s ease; font-family: system-ui, -apple-system, sans-serif; }
     .btn-copy-all:hover { background: #0284c7; color: #ffffff; }
     .btn-copy-all:active { transform: scale(0.96); }
 
-    .log-row { position: relative; cursor: pointer; user-select: text; transition: filter 0.15s ease; }
     .log-row:hover { filter: brightness(1.25); }
     .log-row::after { content: '📋 Copy'; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: #0f172a; color: #94a3b8; font-size: 0.72rem; font-weight: 600; padding: 2px 8px; border-radius: 4px; border: 1px solid #334155; opacity: 0; pointer-events: none; transition: opacity 0.15s ease; font-family: system-ui, -apple-system, sans-serif; }
     @media (min-width: 640px) {
@@ -65,110 +86,233 @@ export const BUILD_HEADER_HTML = `<!DOCTYPE html>
     }
     .log-row.copied::after { content: '✅ Copied!'; background: #166534 !important; color: #4ade80 !important; border-color: #22c55e !important; opacity: 1 !important; }
 
-    /* Mobile Copy Toast */
-    #copy-toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(100px); background: #0f172a; color: #38bdf8; border: 1px solid #0284c7; padding: 8px 18px; border-radius: 9999px; font-size: 0.85rem; font-weight: 700; box-shadow: 0 10px 25px rgba(0,0,0,0.6); opacity: 0; transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1); z-index: 9999; pointer-events: none; font-family: system-ui, -apple-system, sans-serif; }
+    /* Copy Toast */
+    #copy-toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: #0f172a;
+      color: #e2e8f0;
+      border: 1px solid #334155;
+      padding: 8px 18px;
+      border-radius: 9999px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      font-family: system-ui, -apple-system, sans-serif;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+      opacity: 0;
+      transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
+      z-index: 9999;
+      pointer-events: none;
+    }
+
     #copy-toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+    #copy-toast.copy-success { background: #14532d; color: #86efac; border-color: #22c55e; }
+    #copy-toast.copy-failed { background: #7f1d1d; color: #fecaca; border-color: #ef4444; }
   </style>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      const el = document.getElementById('log-output');
-      const copyAllBtn = document.getElementById('copy-all-btn');
+      let toastTimer = null;
 
-      function showToast(msg) {
+      function showToast(message, isSuccess) {
         let toast = document.getElementById('copy-toast');
         if (!toast) {
           toast = document.createElement('div');
           toast.id = 'copy-toast';
           document.body.appendChild(toast);
         }
-        toast.innerText = msg;
+        toast.textContent = message;
+        toast.classList.toggle('copy-success', !!isSuccess);
+        toast.classList.toggle('copy-failed', !isSuccess);
         toast.classList.add('show');
-        setTimeout(() => toast.classList.remove('show'), 1800);
+        if (toastTimer) clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => { toast.classList.remove('show'); }, 2000);
       }
 
-      function copyLogLine(text, rowEl, toastMsg) {
-        if (!text) return;
-        const cleanText = text.replace(/📋 Copy|✅ Copied!/g, '').trim();
-        if (!cleanText) return;
-
-        let success = false;
+      function copyText(text) {
+        if (typeof text !== 'string' || !text.length) return false;
+        const textarea = document.createElement('textarea');
         try {
-          const ta = document.createElement('textarea');
-          ta.value = cleanText;
-          ta.style.position = 'fixed';
-          ta.style.top = '0';
-          ta.style.left = '-9999px';
-          ta.style.opacity = '0';
-          ta.setAttribute('readonly', '');
-          document.body.appendChild(ta);
-          ta.focus();
-          ta.select();
-          ta.setSelectionRange(0, 99999);
-          success = document.execCommand('copy');
-          document.body.removeChild(ta);
-        } catch (e) {
-          success = false;
+          textarea.value = text;
+          textarea.setAttribute('readonly', '');
+          textarea.style.position = 'fixed';
+          textarea.style.top = '0';
+          textarea.style.left = '0';
+          textarea.style.width = '1px';
+          textarea.style.height = '1px';
+          textarea.style.padding = '0';
+          textarea.style.border = '0';
+          textarea.style.opacity = '0';
+          textarea.style.zIndex = '-1';
+          document.body.appendChild(textarea);
+          textarea.focus();
+          textarea.select();
+          textarea.setSelectionRange(0, textarea.value.length);
+          return document.execCommand('copy') === true;
+        } catch (error) {
+          console.error('Copy failed:', error);
+          return false;
+        } finally {
+          const selection = window.getSelection();
+          if (selection) selection.removeAllRanges();
+          if (textarea.parentNode) textarea.parentNode.removeChild(textarea);
         }
-
-        if (!success && navigator.clipboard) {
-          navigator.clipboard.writeText(cleanText).catch(() => {});
-        }
-
-        if (rowEl) {
-          rowEl.classList.add('copied');
-          setTimeout(() => rowEl.classList.remove('copied'), 1500);
-        }
-
-        showToast(toastMsg || '📋 Copied log line!');
       }
 
-      if (copyAllBtn) {
-        copyAllBtn.addEventListener('click', () => {
-          const rawText = el ? (el.innerText || el.textContent || '') : '';
-          copyLogLine(rawText, null, '📋 Copied full log!');
-        });
-      }
-
-      if (el) {
-        // Desktop Click to Copy
-        el.addEventListener('click', (e) => {
-          const row = e.target.closest('.log-row');
-          if (row) {
-            copyLogLine(row.innerText || row.textContent, row);
+      function handleCopy(text, rowElement, successMessage) {
+        const success = copyText(text);
+        if (success) {
+          if (rowElement) {
+            rowElement.classList.add('copied');
+            setTimeout(() => { rowElement.classList.remove('copied'); }, 1500);
           }
-        });
-
-        // Mobile Double-Tap to Copy
-        let lastTapTime = 0;
-        let lastTapRow = null;
-
-        el.addEventListener('touchend', (e) => {
-          const row = e.target.closest('.log-row');
-          if (!row) return;
-
-          const currentTime = Date.now();
-          const tapLength = currentTime - lastTapTime;
-
-          if (tapLength < 320 && tapLength > 0 && lastTapRow === row) {
-            copyLogLine(row.innerText || row.textContent, row);
-            if (navigator.vibrate) navigator.vibrate(50);
-            lastTapTime = 0;
-            lastTapRow = null;
-          } else {
-            lastTapTime = currentTime;
-            lastTapRow = row;
-          }
-        });
+          showToast(successMessage, true);
+        } else {
+          showToast('⚠️ Copy failed', false);
+        }
+        return success;
       }
 
-      // Auto-Scroll Stream
+      let lastTouchTime = 0;
+
+      // Desktop / Mouse Click (Log Row & Copy All)
+      document.addEventListener('click', (event) => {
+        const copyAllButton = event.target.closest('#copy-all-btn');
+        if (copyAllButton) {
+          const logOutput = document.getElementById('log-output');
+          const allText = logOutput ? logOutput.textContent : '';
+          handleCopy(allText, null, '📋 Copied full log!');
+          return;
+        }
+
+        // Suppress synthetic clicks triggered after mobile touch
+        if (Date.now() - lastTouchTime < 600) {
+          return;
+        }
+
+        const row = event.target.closest('.log-row');
+        if (row) {
+          handleCopy(row.textContent, row, '📋 Copied log line!');
+        }
+      });
+
+      // Mobile double-tap
+      const DOUBLE_TAP_DELAY = 320;
+      const MAX_TAP_MOVEMENT = 15;
+      let activeRow = null;
+      let touchStartX = 0;
+      let touchStartY = 0;
+      let movedTooFar = false;
+      let lastTapTime = 0;
+      let lastTappedRow = null;
+
+      document.addEventListener('touchstart', (event) => {
+        lastTouchTime = Date.now();
+        const row = event.target.closest('.log-row');
+        const touch = event.changedTouches[0];
+        activeRow = row || null;
+        movedTooFar = false;
+        if (!row || !touch) return;
+        touchStartX = touch.clientX;
+        touchStartY = touch.clientY;
+      }, { passive: true });
+
+      document.addEventListener('touchmove', (event) => {
+        lastTouchTime = Date.now();
+        if (!activeRow || movedTooFar) return;
+        const touch = event.changedTouches[0];
+        if (!touch) return;
+        const deltaX = Math.abs(touch.clientX - touchStartX);
+        const deltaY = Math.abs(touch.clientY - touchStartY);
+        if (deltaX > MAX_TAP_MOVEMENT || deltaY > MAX_TAP_MOVEMENT) {
+          movedTooFar = true;
+          lastTapTime = 0;
+          lastTappedRow = null;
+        }
+      }, { passive: true });
+
+      document.addEventListener('touchcancel', () => {
+        lastTouchTime = Date.now();
+        activeRow = null;
+        movedTooFar = true;
+        lastTapTime = 0;
+        lastTappedRow = null;
+      }, { passive: true });
+
+      document.addEventListener('touchend', (event) => {
+        lastTouchTime = Date.now();
+        const row = activeRow;
+        const touch = event.changedTouches[0];
+        activeRow = null;
+        if (!row || !touch || movedTooFar) return;
+        const now = Date.now();
+        const isDoubleTap = lastTappedRow === row && lastTapTime > 0 && (now - lastTapTime) <= DOUBLE_TAP_DELAY;
+        if (isDoubleTap) {
+          lastTapTime = 0;
+          lastTappedRow = null;
+          handleCopy(row.textContent, row, '📋 Copied log line!');
+          if (navigator.vibrate) navigator.vibrate(50);
+          return;
+        }
+        lastTapTime = now;
+        lastTappedRow = row;
+      }, { passive: true });
+
+      // Auto-scroll (contained within terminal pre element)
       const scrollToBottom = () => {
-        if (el) el.scrollTop = el.scrollHeight;
-        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+        const logEl = document.getElementById('log-output');
+        if (logEl) {
+          logEl.scrollTop = logEl.scrollHeight;
+        }
       };
-      const observer = new MutationObserver(scrollToBottom);
-      observer.observe(document.body, { childList: true, subtree: true });
-      setInterval(scrollToBottom, 500);
+
+      // Live Stream Reader (Background fetch stream)
+      async function startLogStream() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const key = urlParams.get('key') || '';
+        const commit = urlParams.get('commit') || '';
+        const streamUrl = '/stream?key=' + encodeURIComponent(key) + '&commit=' + encodeURIComponent(commit);
+
+        try {
+          const response = await fetch(streamUrl);
+          if (!response.ok) {
+            console.error('Stream response not ok:', response.status);
+            return;
+          }
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          let lineIndex = 0;
+          let buffer = '';
+
+          while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\\n');
+            buffer = lines.pop();
+
+            const logEl = document.getElementById('log-output');
+            if (!logEl) continue;
+
+            const fragment = document.createDocumentFragment();
+            for (const line of lines) {
+              if (!line && lines.length === 1) continue;
+              const row = document.createElement('span');
+              row.className = 'log-row ' + (lineIndex++ % 2 === 0 ? 'line-even' : 'line-odd');
+              row.textContent = line;
+              fragment.appendChild(row);
+            }
+            logEl.appendChild(fragment);
+            scrollToBottom();
+          }
+        } catch (err) {
+          console.error('Stream error:', err);
+          setTimeout(startLogStream, 3000);
+        }
+      }
+
+      startLogStream();
     });
   </script>
 </head>
@@ -180,7 +324,15 @@ export const BUILD_HEADER_HTML = `<!DOCTYPE html>
         <span class="status-badge bg-info pulse">● LIVE STREAM</span>
       </div>
       <button id="copy-all-btn" class="btn-copy-all">📋 Copy All Logs</button>
-    </div>`;
+    </div>
+    <div class="status-badge bg-info">⏳ Connected to Live Portainer Container Stream...</div>
+    <pre id="log-output"></pre>
+  </div>
+</body>
+</html>`;
+}
+
+export const BUILD_HEADER_HTML = renderWatchPageHtml({});
 
 export const TRIGGER_DISABLED_HTML = `<!DOCTYPE html>
 <html>

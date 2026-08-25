@@ -8,7 +8,8 @@ import {
   TRIGGER_DISABLED_HTML,
   renderSkippedHtml,
   renderDashboardHtml,
-  renderWatchIdleHtml
+  renderWatchIdleHtml,
+  renderWatchPageHtml
 } from './template.mjs';
 
 const PORT = 9876;
@@ -197,8 +198,8 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // 2. Read-only live watch endpoint (/watch or /stream)
-  if (path === '/watch' || path === '/watch/' || path === '/stream') {
+  // 2. Read-only live watch page (/watch)
+  if (path === '/watch' || path === '/watch/') {
     if (!validateKey(key, commit)) {
       res.writeHead(401, { 'Content-Type': 'text/html; charset=utf-8' });
       res.end(UNAUTHORIZED_HTML);
@@ -207,36 +208,34 @@ const server = http.createServer((req, res) => {
 
     res.writeHead(200, {
       'Content-Type': 'text/html; charset=utf-8',
+      'Cache-Control': 'no-cache, no-transform'
+    });
+    res.end(renderWatchPageHtml({ key, commit }));
+    return;
+  }
+
+  // 2b. Live logs stream reader (/stream or /api/logs/stream)
+  if (path === '/stream' || path === '/api/logs/stream') {
+    if (!validateKey(key, commit)) {
+      res.writeHead(401, { 'Content-Type': 'text/plain; charset=utf-8' });
+      res.end('Unauthorized');
+      return;
+    }
+
+    res.writeHead(200, {
+      'Content-Type': 'text/plain; charset=utf-8',
       'Transfer-Encoding': 'chunked',
       'X-Content-Type-Options': 'nosniff',
       'Cache-Control': 'no-cache, no-transform'
     });
-    res.write(BUILD_HEADER_HTML);
     if (typeof res.flushHeaders === 'function') res.flushHeaders();
-
-    res.write(`<div class="status-badge bg-info">⏳ Connected to Live Portainer Container Stream...</div><pre id="log-output">`);
 
     const logProcess = spawn('docker', ['compose', '--env-file', `${PROJECT_DIR}/.env.portainer`, '-f', `${PROJECT_DIR}/docker/compose.yml`, 'logs', '-f', '--tail', '100'], { cwd: PROJECT_DIR });
 
-    let lineIndex = 0;
-    let pendingBuffer = '';
-
     const streamData = (data) => {
       try {
-        pendingBuffer += data.toString();
-        const lines = pendingBuffer.split('\n');
-        pendingBuffer = lines.pop();
-
-        let htmlChunk = '';
-        for (const line of lines) {
-          const cls = (lineIndex++ % 2 === 0) ? 'line-even' : 'line-odd';
-          const sanitized = line.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-          htmlChunk += `<span class="log-row ${cls}">${sanitized}</span>\n`;
-        }
-        if (htmlChunk) {
-          res.write(htmlChunk);
-          if (typeof res.flush === 'function') res.flush();
-        }
+        res.write(data);
+        if (typeof res.flush === 'function') res.flush();
       } catch (e) {}
     };
 
