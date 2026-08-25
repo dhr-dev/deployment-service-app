@@ -218,11 +218,25 @@ const server = http.createServer((req, res) => {
 
     const logProcess = spawn('docker', ['compose', '--env-file', `${PROJECT_DIR}/.env.portainer`, '-f', `${PROJECT_DIR}/docker/compose.yml`, 'logs', '-f', '--tail', '100'], { cwd: PROJECT_DIR });
 
+    let lineIndex = 0;
+    let pendingBuffer = '';
+
     const streamData = (data) => {
       try {
-        const sanitized = data.toString().replace(/</g, '&lt;').replace(/>/g, '&gt;');
-        res.write(sanitized);
-        if (typeof res.flush === 'function') res.flush();
+        pendingBuffer += data.toString();
+        const lines = pendingBuffer.split('\n');
+        pendingBuffer = lines.pop();
+
+        let htmlChunk = '';
+        for (const line of lines) {
+          const cls = (lineIndex++ % 2 === 0) ? 'line-even' : 'line-odd';
+          const sanitized = line.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+          htmlChunk += `<span class="log-row ${cls}">${sanitized}</span>\n`;
+        }
+        if (htmlChunk) {
+          res.write(htmlChunk);
+          if (typeof res.flush === 'function') res.flush();
+        }
       } catch (e) {}
     };
 

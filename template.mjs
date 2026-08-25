@@ -57,43 +57,14 @@ export const BUILD_HEADER_HTML = `<!DOCTYPE html>
   </style>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      const el = document.getElementById('log-output');
-      if (!el) return;
-
-      let rawBuffer = '';
-
-      function escapeHtml(str) {
-        return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-      }
-
-      function updateZebraRows() {
-        const text = el.innerText || el.textContent || '';
-        if (!text || text === rawBuffer) return;
-        rawBuffer = text;
-
-        const lines = text.split('\n');
-        let html = '';
-        for (let i = 0; i < lines.length; i++) {
-          const line = lines[i];
-          if (i === lines.length - 1 && !line) continue;
-          const cls = (i % 2 === 0) ? 'line-even' : 'line-odd';
-          html += '<span class="log-row ' + cls + '">' + escapeHtml(line) + '</span>';
-        }
-
-        observer.disconnect();
-        el.innerHTML = html;
-        el.scrollTop = el.scrollHeight;
+      const scrollToBottom = () => {
+        const el = document.getElementById('log-output');
+        if (el) el.scrollTop = el.scrollHeight;
         window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-        observer.observe(el, { childList: true, characterData: true, subtree: true });
-      }
-
-      const observer = new MutationObserver(() => {
-        updateZebraRows();
-      });
-      observer.observe(el, { childList: true, characterData: true, subtree: true });
-      setTimeout(updateZebraRows, 50);
-      setTimeout(updateZebraRows, 300);
-      setTimeout(updateZebraRows, 800);
+      };
+      const observer = new MutationObserver(scrollToBottom);
+      observer.observe(document.body, { childList: true, subtree: true });
+      setInterval(scrollToBottom, 500);
     });
   </script>
 </head>
