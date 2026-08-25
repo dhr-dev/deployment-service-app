@@ -45,6 +45,10 @@ export const BUILD_HEADER_HTML = `<!DOCTYPE html>
     .log-row.line-even { background: #1e293b !important; color: #38bdf8 !important; border-left: 3px solid #0284c7 !important; } /* Row 1: Slate Blue / Cyan */
     .log-row.line-odd  { background: #0b0f19 !important; color: #4ade80 !important; border-left: 3px solid #16a34a !important; } /* Row 2: Deep Charcoal / Green */
 
+    /* Copy Tooltip & Interactive Log Line Styling */
+    .log-row { position: relative; cursor: pointer; user-select: text; transition: filter 0.15s ease; }
+    .log-row:hover { filter: brightness(1.25); }
+    .log-row::after { content: '📋 Copy'; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: #0f172a; color: #94a3b8; font-size: 0.72rem; font-weight: 600; padding: 2px 8px; border-radius: 4px; border: 1px solid #334155; opacity: 0; pointer-events: none; transition: opacity 0.15s ease; font-family: system-ui, -apple-system, sans-serif; }
     @media (min-width: 640px) {
       body { padding: 1.5rem 1rem; }
       .container { padding: 1.5rem; border-radius: 12px; }
@@ -53,12 +57,95 @@ export const BUILD_HEADER_HTML = `<!DOCTYPE html>
       pre { padding: 0.75rem; font-size: 0.88rem; line-height: 1.5; }
       .status-badge { font-size: 0.85rem; margin-bottom: 1rem; padding: 4px 12px; }
       .log-row { padding: 5px 10px; margin: 3px 0; }
+      .log-row:hover::after { opacity: 1; }
     }
+    .log-row.copied::after { content: '✅ Copied!'; background: #166534 !important; color: #4ade80 !important; border-color: #22c55e !important; opacity: 1 !important; }
+
+    /* Mobile Copy Toast */
+    #copy-toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(100px); background: #0f172a; color: #38bdf8; border: 1px solid #0284c7; padding: 8px 18px; border-radius: 9999px; font-size: 0.85rem; font-weight: 700; box-shadow: 0 10px 25px rgba(0,0,0,0.6); opacity: 0; transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1); z-index: 9999; pointer-events: none; font-family: system-ui, -apple-system, sans-serif; }
+    #copy-toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
   </style>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
+      const el = document.getElementById('log-output');
+
+      function showToast(msg) {
+        let toast = document.getElementById('copy-toast');
+        if (!toast) {
+          toast = document.createElement('div');
+          toast.id = 'copy-toast';
+          document.body.appendChild(toast);
+        }
+        toast.innerText = msg;
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 1800);
+      }
+
+      function copyLogLine(text, rowEl) {
+        if (!text) return;
+        const cleanText = text.replace(/📋 Copy|✅ Copied!/g, '').trim();
+        if (!cleanText) return;
+
+        if (rowEl) {
+          rowEl.classList.add('copied');
+          setTimeout(() => rowEl.classList.remove('copied'), 1500);
+        }
+
+        if (navigator.clipboard && window.isSecureContext) {
+          navigator.clipboard.writeText(cleanText).then(() => {
+            showToast('📋 Copied log line!');
+          }).catch(() => fallbackCopy(cleanText));
+        } else {
+          fallbackCopy(cleanText);
+        }
+      }
+
+      function fallbackCopy(text) {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        try {
+          document.execCommand('copy');
+          showToast('📋 Copied log line!');
+        } catch (e) {}
+        document.body.removeChild(ta);
+      }
+
+      if (el) {
+        // Desktop Click to Copy
+        el.addEventListener('click', (e) => {
+          const row = e.target.closest('.log-row');
+          if (row) {
+            copyLogLine(row.innerText || row.textContent, row);
+          }
+        });
+
+        // Mobile Long-Press (Press and Hold ~450ms)
+        let pressTimer = null;
+
+        el.addEventListener('touchstart', (e) => {
+          const row = e.target.closest('.log-row');
+          if (!row) return;
+          pressTimer = setTimeout(() => {
+            copyLogLine(row.innerText || row.textContent, row);
+            if (navigator.vibrate) navigator.vibrate(50);
+          }, 450);
+        }, { passive: true });
+
+        el.addEventListener('touchend', () => {
+          if (pressTimer) clearTimeout(pressTimer);
+        });
+
+        el.addEventListener('touchmove', () => {
+          if (pressTimer) clearTimeout(pressTimer);
+        });
+      }
+
+      // Auto-Scroll Stream
       const scrollToBottom = () => {
-        const el = document.getElementById('log-output');
         if (el) el.scrollTop = el.scrollHeight;
         window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
       };
