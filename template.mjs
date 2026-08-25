@@ -39,23 +39,55 @@ export const BUILD_HEADER_HTML = `<!DOCTYPE html>
     .bg-info { background: #1e40af; color: #93c5fd; }
     .pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
     @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+    /* Zebra Striping (Alternating Excel-style odd/even log rows) */
+    .log-row { display: block; padding: 2px 6px; border-radius: 4px; margin: 1px 0; word-break: break-all; white-space: pre-wrap; font-family: inherit; }
+    .log-row.line-even { background: rgba(15, 23, 42, 0.75); color: #38bdf8; border-left: 2px solid #0284c7; } /* Deep Navy/Cyan */
+    .log-row.line-odd  { background: rgba(3, 7, 18, 0.95);   color: #4ade80; border-left: 2px solid #16a34a; } /* Dark Emerald/Green */
+
     @media (min-width: 640px) {
       body { padding: 1.5rem 1rem; }
       .container { padding: 1.5rem; border-radius: 12px; }
       .header { padding-bottom: 0.75rem; margin-bottom: 1rem; }
       h1 { font-size: 1.3rem; }
-      pre { padding: 1.2rem; font-size: 0.88rem; line-height: 1.5; }
+      pre { padding: 1rem; font-size: 0.88rem; line-height: 1.5; }
       .status-badge { font-size: 0.85rem; margin-bottom: 1rem; padding: 4px 12px; }
+      .log-row { padding: 3px 8px; margin: 2px 0; }
     }
   </style>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      const observer = new MutationObserver(() => {
+      const el = document.getElementById('log-output');
+      if (!el) return;
+
+      let lastContent = '';
+
+      function escapeHtml(str) {
+        return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      }
+
+      function updateZebraRows() {
+        const text = el.innerText || el.textContent || '';
+        if (text === lastContent) return;
+        lastContent = text;
+
+        const lines = text.split('\n');
+        let html = '';
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i];
+          if (i === lines.length - 1 && !line) continue;
+          const cls = (i % 2 === 0) ? 'line-even' : 'line-odd';
+          html += '<span class="log-row ' + cls + '">' + escapeHtml(line) + '</span>';
+        }
+        el.innerHTML = html;
+        el.scrollTop = el.scrollHeight;
         window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-        const el = document.getElementById('log-output');
-        if (el) el.scrollTop = el.scrollHeight;
+      }
+
+      const observer = new MutationObserver(() => {
+        updateZebraRows();
       });
-      observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+      observer.observe(el, { childList: true, characterData: true, subtree: true });
+      setTimeout(updateZebraRows, 100);
     });
   </script>
 </head>
